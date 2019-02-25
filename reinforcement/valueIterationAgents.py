@@ -67,7 +67,7 @@ class ValueIterationAgent(ValueEstimationAgent):
             for s in states:
                 actions = self.mdp.getPossibleActions(s)
                 if not actions:
-                    continue
+                    continue # No reward gained from a future state, because there are no possible actions.
                 else:
                     newValues[s] = max([self.computeQValueFromValues(s, a) for a in actions])
             self.values = newValues
