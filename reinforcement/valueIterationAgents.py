@@ -142,7 +142,16 @@ class AsynchronousValueIterationAgent(ValueIterationAgent):
         ValueIterationAgent.__init__(self, mdp, discount, iterations)
 
     def runValueIteration(self):
-        "*** YOUR CODE HERE ***"
+        states = self.mdp.getStates()
+        for i in range(self.iterations):
+            s = states[i % len(states)]
+            actions = self.mdp.getPossibleActions(s)
+            if not actions:
+                continue  # No reward gained from a future state, because there are no
+                          # possible actions from terminal state.
+            else:
+                self.values[s] = max([self.computeQValueFromValues(s, a) for a in actions])
+
 
 class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
     """
@@ -162,5 +171,45 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
         ValueIterationAgent.__init__(self, mdp, discount, iterations)
 
     def runValueIteration(self):
-        "*** YOUR CODE HERE ***"
+        states = self.mdp.getStates()
 
+        # 1. Compute predecessors for each state. Dict [State] -> [Set of states]
+        predecessors = {}
+        for s in states:
+            actions = self.mdp.getPossibleActions(s)
+            neighbors = set()
+            for a in actions:
+                neighbors |= set([nextState for nextState, prob in self.mdp.getTransitionStatesAndProbs(s, a)
+                                            if prob > 0])
+            for n in neighbors:
+                predecessors[n] = predecessors.get(n, set()).union({s})    # Update predecessors for each node that
+                                                                           # the current state points to.
+
+        # 2. Initialize Priority Queue
+        pQueue = util.PriorityQueue()
+
+        # 3. Fill up priority queue with initial values
+        for s in states:
+            actions = self.mdp.getPossibleActions(s)
+            if self.mdp.isTerminal(s):
+                continue
+            diff = abs(self.values[s] - max([self.computeQValueFromValues(s, a) for a in actions]))
+            pQueue.push(s, -diff)
+
+        # 4. Iteratively update values, using priority
+        for _ in range(self.iterations):
+            if pQueue.isEmpty():
+                return
+            sToUpdate = pQueue.pop()
+
+            # If not terminal, update the value of this node.
+            sToUpdateActions = self.mdp.getPossibleActions(sToUpdate)
+            if not self.mdp.isTerminal(sToUpdate):
+                self.values[sToUpdate] = max([self.computeQValueFromValues(sToUpdate, a) for a in sToUpdateActions])
+
+            for p in predecessors[sToUpdate]:
+                pActions = self.mdp.getPossibleActions(p)
+                if not self.mdp.isTerminal(p):
+                    diff = abs(self.values[p] - max([self.computeQValueFromValues(p, a) for a in pActions]))
+                    if diff > self.theta:
+                        pQueue.update(p, -diff)
