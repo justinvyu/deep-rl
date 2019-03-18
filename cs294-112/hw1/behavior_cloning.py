@@ -7,10 +7,20 @@ import os
 import matplotlib.pyplot as plt
 
 def build_model(observation_shape, action_dim):
-    model = keras.Sequential([
-        keras.layers.Dense(64, activation="relu", input_shape=observation_shape),
-        keras.layers.Dense(32, activation="relu"),
-        keras.layers.Dense(action_dim) # Output a vector of the action dimension
+    # For other envs.
+    # model = keras.Sequential([
+    #     keras.layers.Dense(64, activation="relu", input_shape=observation_shape),
+    #     keras.layers.Dense(32, activation="relu"),
+    #     keras.layers.Dense(action_dim) # Output a vector of the action dimension
+    # ])
+    # model.compile(optimizer=tf.train.RMSPropOptimizer(0.001),
+    #               loss='mse')
+    # For Humanoid-v2
+    model = tf.keras.Sequential([
+        keras.layers.Dense(128, activation="relu", input_shape=observation_shape),
+        keras.layers.Dense(64, activation="relu"),
+        keras.layers.Dense(64, activation="relu"),
+        keras.layers.Dense(action_dim)  # Output a vector of the action dimension
     ])
     model.compile(optimizer=tf.train.RMSPropOptimizer(0.001),
                   loss='mse')
@@ -60,7 +70,7 @@ def run_policy(env_name):
 
     import gym
     model = build_model(test_X.shape[1:], test_y.shape[1])
-    model.load_weights("./weights/" + env_name)
+    model.load_weights("./dagger_weights/" + env_name)
     env = gym.make(env_name)
     max_steps = env.spec.timestep_limit
     num_rollouts = 20
@@ -112,5 +122,5 @@ if __name__ == "__main__":
     if args.train:
         train_model(args.env, args.epochs)
     else:
-        evaluate_model(args.env)
+        # evaluate_model(args.env)
         run_policy(args.env)
