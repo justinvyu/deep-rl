@@ -3,3 +3,7 @@ __pycache__/
 *.py[cod]
 .xml
 .idea/
+
+*.pkl
+cs294-112/hw1/weights/
+
