@@ -41,10 +41,10 @@ def get_training_testing_split(env_name):
     # print(train_X[0], train_y[0])
     return train_X, train_y, test_X, test_y
 
-def train_model(env_name):
+def train_model(env_name, epochs):
     train_X, train_y, _, _ = get_training_testing_split(env_name)
     model = build_model(train_X.shape[1:], train_y.shape[1])
-    model.fit(train_X, train_y, epochs=10, batch_size=32)
+    model.fit(train_X, train_y, epochs=epochs, batch_size=32)
     model.save_weights("./weights/" + env_name)
 
 def evaluate_model(env_name):
@@ -64,6 +64,7 @@ def run_policy(env_name):
     env = gym.make(env_name)
     max_steps = env.spec.timestep_limit
     num_rollouts = 20
+    render = False
 
     returns = []
     observations = []
@@ -81,7 +82,8 @@ def run_policy(env_name):
             obs, r, done, _ = env.step(action)
             totalr += r
             steps += 1
-            env.render()
+            if render:
+                env.render()
             if steps % 100 == 0: print("%i/%i" % (steps, max_steps))
             if steps >= max_steps:
                 break
@@ -103,10 +105,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("env", type=str)
     parser.add_argument("--train", type=bool, default=False)
+    parser.add_argument("--epochs", type=int, default=10)
     args = parser.parse_args()
 
+    print(args.train, args.epochs)
     if args.train:
-        train_model(args.env)
+        train_model(args.env, args.epochs)
     else:
         evaluate_model(args.env)
         run_policy(args.env)
