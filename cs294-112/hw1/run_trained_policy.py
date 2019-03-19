@@ -2,12 +2,11 @@ import pickle
 import numpy as np
 import os
 
-def run_policy(env_name, policy):
+def run_policy(env_name, policy, render=False):
     import gym
     env = gym.make(env_name)
     max_steps = env.spec.timestep_limit
     num_rollouts = 20
-    render = False
 
     returns = []
     observations = []

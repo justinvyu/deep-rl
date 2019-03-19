@@ -72,5 +72,50 @@ def main():
         with open(os.path.join('expert_data', args.envname + '.pkl'), 'wb') as f:
             pickle.dump(expert_data, f, pickle.HIGHEST_PROTOCOL)
 
+def collect_expert_returns(env_name, num_samples):
+    print('loading and building expert policy')
+    policy_fn = load_policy.load_policy("./experts/" + env_name + ".pkl")
+    print('loaded and built')
+
+    with tf.Session():
+        tf_util.initialize()
+
+        import gym
+        env = gym.make(env_name)
+        max_steps = env.spec.timestep_limit
+
+        mean_returns = []
+        std_returns = []
+        for _ in range(num_samples):
+            returns = []
+            for i in range(25):
+                print('iter', i)
+                obs = env.reset()
+                done = False
+                totalr = 0.
+                steps = 0
+                while not done:
+                    action = policy_fn(obs[None,:])
+                    obs, r, done, _ = env.step(action)
+                    totalr += r
+                    steps += 1
+                    if steps % 100 == 0: print("%i/%i"%(steps, max_steps))
+                    if steps >= max_steps:
+                        break
+                returns.append(totalr)
+
+            print('returns', returns)
+            print('mean return', np.mean(returns))
+            print('std of return', np.std(returns))
+            mean_returns.append(np.mean(returns))
+            std_returns.append(np.std(returns))
+
+        expert_data = {'mean': np.array(mean_returns),
+                       'std': np.array(std_returns)}
+
+        with open(os.path.join('expert_return_data', env_name + '.pkl'), 'wb') as f:
+            pickle.dump(expert_data, f, pickle.HIGHEST_PROTOCOL)
+
 if __name__ == '__main__':
-    main()
+    # main()
+    collect_expert_returns("Humanoid-v2", 12)

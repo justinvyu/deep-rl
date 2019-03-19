@@ -52,8 +52,9 @@ def main(env_name, train=True):
         with tf.Session():
             tf_util.initialize()
 
-            epochs = 50
-            convergence_threshold = 0.0005
+            # epochs = 50
+            epochs = 25
+            convergence_threshold = 0.0001
             std_loss = 1
 
             loss_history = []
@@ -61,27 +62,19 @@ def main(env_name, train=True):
             std_history = []
             dataset_size_history = []
             dagger_cycles = 0
-            while std_loss > convergence_threshold:
+            while dagger_cycles < 50 or std_loss > convergence_threshold:
                 print("D size:", D.shape)
                 print("D_labels size:", D_labels.shape)
-                history = model.fit(D, D_labels, epochs=epochs, batch_size=32)
-                loss = history.history["loss"]
-                std_loss = np.std(loss)
-
-                # Save model bc_weights and loss history
-                model.save_weights("./dagger_weights/" + env_name)
-                loss_history += loss
-                print(std_loss)
 
                 print("Sampling policy and labeling with expert data to build D_pi")
                 D_pi, D_pi_labels, returns = sample_policy(model, env_name)
 
-                print(D_pi, D_pi_labels, D_pi.shape, D_pi_labels.shape)
                 D = np.vstack((D, D_pi))
                 D_labels = np.vstack((D_labels, D_pi_labels))
 
                 mean_history.append(np.mean(returns))
                 std_history.append(np.std(returns))
+                print(returns, mean_history, std_history)
                 dataset_size_history.append(len(D))
                 dagger_cycles += 1
 
@@ -92,19 +85,32 @@ def main(env_name, train=True):
                            "loss": np.array(loss_history)}
                 with open(os.path.join('dagger_history', env_name + '.pkl'), 'wb') as f:
                     pickle.dump(results, f, pickle.HIGHEST_PROTOCOL)
+
+                # Fit model on new aggregated dataset
+                history = model.fit(D, D_labels, epochs=epochs, batch_size=32)
+                loss = history.history["loss"]
+                std_loss = np.std(loss)
+
+                # Save model bc_weights and loss history
+                model.save_weights("./dagger_weights/" + env_name)
+                loss_history += loss
+                print(std_loss)
+
     else:
         model.load_weights('./dagger_weights/' + env_name)
-        run_policy(env_name, model)
+        run_policy(env_name, model, render=True)
 
 def sample_policy(policy, env_name):
     env = gym.make(env_name)
     max_steps = env.spec.timestep_limit
+    # num_rollouts = 5
     num_rollouts = 25
     render = False
 
     expert_policy = load_policy.load_policy("./experts/" + env_name + ".pkl")
     observations = []
     expert_actions = []
+    returns = []
 
     for i in range(num_rollouts):
         print('iter', i)
@@ -112,7 +118,6 @@ def sample_policy(policy, env_name):
         done = False
         totalr = 0.
         steps = 0
-        returns = []
         while not done:
             action = policy.predict(obs[None, :])
             expert_action = expert_policy(obs[None, :])[0] # Flatten from 2D

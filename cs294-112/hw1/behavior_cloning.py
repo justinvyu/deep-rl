@@ -8,20 +8,20 @@ import matplotlib.pyplot as plt
 
 def build_model(observation_shape, action_dim):
     # For other envs:
-    # model = keras.Sequential([
-    #     keras.layers.Dense(64, activation="relu", input_shape=observation_shape),
-    #     keras.layers.Dense(32, activation="relu"),
-    #     keras.layers.Dense(action_dim) # Output a vector of the action dimension
-    # ])
-    # model.compile(optimizer=tf.train.RMSPropOptimizer(0.001),
-    #               loss='mse')
-    # For Humanoid-v2
-    model = tf.keras.Sequential([
-        keras.layers.Dense(128, activation="relu", input_shape=observation_shape),
-        keras.layers.Dense(64, activation="relu"),
-        keras.layers.Dense(64, activation="relu"),
-        keras.layers.Dense(action_dim)  # Output a vector of the action dimension
+    model = keras.Sequential([
+        keras.layers.Dense(64, activation="relu", input_shape=observation_shape),
+        keras.layers.Dense(32, activation="relu"),
+        keras.layers.Dense(action_dim) # Output a vector of the action dimension
     ])
+    model.compile(optimizer=tf.train.RMSPropOptimizer(0.001),
+                  loss='mse')
+    # For Humanoid-v2
+    # model = tf.keras.Sequential([
+    #     keras.layers.Dense(128, activation="relu", input_shape=observation_shape),
+    #     keras.layers.Dense(64, activation="relu"),
+    #     keras.layers.Dense(64, activation="relu"),
+    #     keras.layers.Dense(action_dim)  # Output a vector of the action dimension
+    # ])
     model.compile(optimizer=tf.train.RMSPropOptimizer(0.001),
                   loss='mse')
     print(model.summary())
@@ -70,10 +70,10 @@ def run_policy(env_name):
 
     import gym
     model = build_model(test_X.shape[1:], test_y.shape[1])
-    model.load_weights("./bc_weights/" + env_name)
+    # model.load_weights("./bc_weights/" + env_name)
     env = gym.make(env_name)
     max_steps = env.spec.timestep_limit
-    num_rollouts = 20
+    num_rollouts = 5
     render = False
 
     returns = []
@@ -103,12 +103,12 @@ def run_policy(env_name):
     print('mean return', np.mean(returns))
     print('std of return', np.std(returns))
 
-    expert_data = {'observations': np.array(observations),
-                   'actions': np.array(actions),
-                   'returns': np.array(returns)}
-
-    with open(os.path.join('clone_data', env_name + '.pkl'), 'wb') as f:
-        pickle.dump(expert_data, f, pickle.HIGHEST_PROTOCOL)
+    # expert_data = {'observations': np.array(observations),
+    #                'actions': np.array(actions),
+    #                'returns': np.array(returns)}
+    #
+    # with open(os.path.join('clone_data', env_name + '.pkl'), 'wb') as f:
+    #     pickle.dump(expert_data, f, pickle.HIGHEST_PROTOCOL)
 
 if __name__ == "__main__":
     import argparse
