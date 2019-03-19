@@ -5,5 +5,5 @@ __pycache__/
 .idea/
 
 *.pkl
-cs294-112/hw1/weights/
+cs294-112/hw1/bc_weights/
 cs294-112/hw1/dagger_weights/

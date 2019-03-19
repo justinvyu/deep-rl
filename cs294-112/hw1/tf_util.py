@@ -135,7 +135,7 @@ def conv2d(x, num_filters, name, filter_size=(3, 3), stride=(1, 1), pad="SAME", 
         # "num output feature maps * filter height * filter width" /
         #   pooling size
         fan_out = intprod(filter_shape[:2]) * num_filters
-        # initialize weights with random weights
+        # initialize bc_weights with random bc_weights
         w_bound = np.sqrt(6. / (fan_in + fan_out))
 
         w = tf.get_variable("W", filter_shape, dtype, tf.random_uniform_initializer(-w_bound, w_bound),

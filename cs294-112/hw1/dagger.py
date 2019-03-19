@@ -8,8 +8,9 @@ import load_policy
 import os
 import matplotlib.pyplot as plt
 import tf_util
+from run_trained_policy import run_policy
 
-def main():
+def main(env_name, train=True):
     """
     DAgger: Dataset Aggregation
     Goal: collect data from the learned policy instead of the true policy of the data.
@@ -47,49 +48,53 @@ def main():
 
     D, test_X, D_labels, test_y = train_test_split(observations, actions, test_size=0.5)
 
-    with tf.Session():
-        tf_util.initialize()
+    if train:
+        with tf.Session():
+            tf_util.initialize()
 
-        epochs = 50
-        convergence_threshold = 0.0001
-        std_loss = 1
+            epochs = 50
+            convergence_threshold = 0.0005
+            std_loss = 1
 
-        loss_history = []
-        mean_history = []
-        std_history = []
-        dataset_size_history = []
-        dagger_cycles = 0
-        while std_loss > convergence_threshold:
-            print("D size:", D.shape)
-            print("D_labels size:", D_labels.shape)
-            history = model.fit(D, D_labels, epochs=epochs, batch_size=32)
-            loss = history.history["loss"]
-            std_loss = np.std(loss)
+            loss_history = []
+            mean_history = []
+            std_history = []
+            dataset_size_history = []
+            dagger_cycles = 0
+            while std_loss > convergence_threshold:
+                print("D size:", D.shape)
+                print("D_labels size:", D_labels.shape)
+                history = model.fit(D, D_labels, epochs=epochs, batch_size=32)
+                loss = history.history["loss"]
+                std_loss = np.std(loss)
 
-            # Save model weights and loss history
-            model.save_weights("./dagger_weights/" + env_name)
-            loss_history += loss
-            print(std_loss)
+                # Save model bc_weights and loss history
+                model.save_weights("./dagger_weights/" + env_name)
+                loss_history += loss
+                print(std_loss)
 
-            print("Sampling policy and labeling with expert data to build D_pi")
-            D_pi, D_pi_labels, returns = sample_policy(model, env_name)
+                print("Sampling policy and labeling with expert data to build D_pi")
+                D_pi, D_pi_labels, returns = sample_policy(model, env_name)
 
-            print(D_pi, D_pi_labels, D_pi.shape, D_pi_labels.shape)
-            D = np.vstack((D, D_pi))
-            D_labels = np.vstack((D_labels, D_pi_labels))
+                print(D_pi, D_pi_labels, D_pi.shape, D_pi_labels.shape)
+                D = np.vstack((D, D_pi))
+                D_labels = np.vstack((D_labels, D_pi_labels))
 
-            mean_history.append(np.mean(returns))
-            std_history.append(np.std(returns))
-            dataset_size_history.append(len(D))
-            dagger_cycles += 1
+                mean_history.append(np.mean(returns))
+                std_history.append(np.std(returns))
+                dataset_size_history.append(len(D))
+                dagger_cycles += 1
 
-        results = {"mean": np.array(mean_history),
-                   "std": np.array(std_history),
-                   "size": np.array(dataset_size_history),
-                   "num_iters": dagger_cycles,
-                   "loss": np.array(loss_history)}
-        with open(os.path.join('dagger_history', env_name + '.pkl'), 'wb') as f:
-            pickle.dump(results, f, pickle.HIGHEST_PROTOCOL)
+                results = {"mean": np.array(mean_history),
+                           "std": np.array(std_history),
+                           "size": np.array(dataset_size_history),
+                           "num_iters": dagger_cycles,
+                           "loss": np.array(loss_history)}
+                with open(os.path.join('dagger_history', env_name + '.pkl'), 'wb') as f:
+                    pickle.dump(results, f, pickle.HIGHEST_PROTOCOL)
+    else:
+        model.load_weights('./dagger_weights/' + env_name)
+        run_policy(env_name, model)
 
 def sample_policy(policy, env_name):
     env = gym.make(env_name)
@@ -122,4 +127,13 @@ def sample_policy(policy, env_name):
     return np.array(observations), np.array(expert_actions), np.array(returns)
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("env", type=str)
+    parser.add_argument("--train", type=bool, default=False)
+    args = parser.parse_args()
+
+    if args.train:
+        main(args.env)
+    else:
+        main(args.env, train=False)

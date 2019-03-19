@@ -7,7 +7,7 @@ import os
 import matplotlib.pyplot as plt
 
 def build_model(observation_shape, action_dim):
-    # For other envs.
+    # For other envs:
     # model = keras.Sequential([
     #     keras.layers.Dense(64, activation="relu", input_shape=observation_shape),
     #     keras.layers.Dense(32, activation="relu"),
@@ -55,14 +55,14 @@ def train_model(env_name, epochs):
     train_X, train_y, _, _ = get_training_testing_split(env_name)
     model = build_model(train_X.shape[1:], train_y.shape[1])
     model.fit(train_X, train_y, epochs=epochs, batch_size=32)
-    model.save_weights("./weights/" + env_name)
+    model.save_weights("./bc_weights/" + env_name)
 
 def evaluate_model(env_name):
     _, _, test_X, test_y = get_training_testing_split(env_name)
 
     print(test_X.shape, test_y.shape)
     model = build_model(test_X.shape[1:], test_y.shape[1])
-    model.load_weights("./weights/" + env_name)
+    model.load_weights("./bc_weights/" + env_name)
     model.evaluate(test_X, test_y)
 
 def run_policy(env_name):
@@ -70,7 +70,7 @@ def run_policy(env_name):
 
     import gym
     model = build_model(test_X.shape[1:], test_y.shape[1])
-    model.load_weights("./dagger_weights/" + env_name)
+    model.load_weights("./bc_weights/" + env_name)
     env = gym.make(env_name)
     max_steps = env.spec.timestep_limit
     num_rollouts = 20
@@ -118,7 +118,6 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=10)
     args = parser.parse_args()
 
-    print(args.train, args.epochs)
     if args.train:
         train_model(args.env, args.epochs)
     else:
