@@ -4,7 +4,7 @@ import pickle
 import numpy as np
 import os
 
-env = "CartPole-v0"
+env = "Acrobot-v1"
 data_path = "./train_history/" + env + ".pkl"
 
 with open(data_path, "rb") as f:

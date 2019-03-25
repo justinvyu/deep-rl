@@ -1,69 +1,36 @@
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.distributions import Categorical
 import torch.optim as optim
 import numpy as np
 import gym
+from gym.spaces import Discrete, Box
 import pickle
 import os
-
-class MLP(nn.Module):
-    def __init__(self, input_size, layer_sizes, output_size, activation=F.relu, output_activation=None):
-        super(MLP, self).__init__()
-        assert len(layer_sizes) > 0, "Must have at least one hidden layer"
-        self.activation = activation
-        self.output_activation = output_activation
-        layers = nn.ModuleList()
-        # print(input_size, layer_sizes, output_size)
-        layers.append(nn.Linear(input_size, layer_sizes[0]))
-        for i in range(len(layer_sizes) - 1):
-            layers.append(nn.Linear(layer_sizes[i], layer_sizes[i + 1]))
-        layers.append(nn.Linear(layer_sizes[len(layer_sizes) - 1], output_size))
-        self.layers = layers
-
-    def forward(self, x):
-        for layer in self.layers[:-1]:
-            x = self.activation(layer(x))
-        if self.output_activation:
-            x = self.output_activation(self.layers[:-1](x))
-        else:
-            x = self.layers[-1](x)
-        return x
-
-class CategoricalPolicy(nn.Module):
-    def __init__(self, observation_dim, hidden_layers, action_dim, activation=F.relu):
-        super(CategoricalPolicy, self).__init__()
-
-        # Represent the function that calculates action logits as an MLP.
-        self.logits = MLP(observation_dim, hidden_layers, action_dim, activation=activation)
-        self.model_representation = [observation_dim] + hidden_layers + [action_dim]
-
-    def forward(self, x, action=None):
-        observation = x
-        # Get the log probabilities of actions, given the observation.
-        logits = self.logits(observation)
-        # Now, create a categorical distribution (which is the policy for a discrete-action setting).
-        policy = Categorical(logits=logits)
-        # Sample from the policy, unless we are provided an action. In that case,
-        # calculate the probability of pi(a|s).
-        if action is None:
-            sample_act = policy.sample()
-        else:
-            sample_act = action
-        # Return log probability (for use in creating the surrogate loss function.
-        return sample_act, policy.log_prob(sample_act)
+from policy import DiscretePolicy, ContinuousPolicy
 
 class VPG:
     def __init__(self, env):
         self.env_name = env
         self.env = gym.make(env)
         self.observation_dim = self.env.observation_space.shape[0]
-        self.action_dim = self.env.action_space.n
+
+        action_space = self.env.action_space
+        self.discrete = isinstance(action_space, Discrete)
+
+        if self.discrete:
+            self.action_dim = self.env.action_space.n
+        else:
+            self.action_dim = self.env.action_space.shape[0]
+
         self.policy = self.build_model()
+        # for name, param in self.policy.named_parameters():
+        #     if param.requires_grad:
+        #         print(name, param.data)
 
     def build_model(self, hidden_layers=[32]):
-        return CategoricalPolicy(self.observation_dim, hidden_layers, self.action_dim)
+        if self.discrete:
+            return DiscretePolicy(self.observation_dim, hidden_layers, self.action_dim)
+        else:
+            return ContinuousPolicy(self.observation_dim, hidden_layers, self.action_dim)
 
     def save_checkpoint(self):
         torch.save(self.policy.state_dict(), "./weights/" + self.env_name)
@@ -71,10 +38,10 @@ class VPG:
     def load_checkpoint(self):
         self.policy.load_state_dict(torch.load("./weights/" + self.env_name))
 
-    def train(self, batch_size=5000, epochs=100, lr=1e-2):
+    def train(self, batch_size=5000, epochs=100, lr=1e-2, render=False):
         return_means, return_stds = [], []
         for epoch in range(epochs):
-            loss, returns, lens = self.train_step(batch_size, lr)
+            loss, returns, lens = self.train_step(batch_size, lr, render=render)
             print('epoch: %3d \t loss: %.3f \t avg return: %.3f \t ep_len: %.3f' %
                   (epoch, loss, np.mean(returns), np.mean(lens)))
             return_means.append(np.mean(returns))
@@ -191,14 +158,15 @@ class VPG:
             print('rollout #: %3d \t return: %.3f \t ep_len: %.3f' %
                   (i, ep_return, ep_len))
 
+        env.close()
         print('avg return: %.3f \t avg ep_len: %.3f' %
               (np.mean(batch_returns), np.mean(batch_lens)))
 
 if __name__ == "__main__":
-    vpg = VPG("CartPole-v0")
-    train = True
+    vpg = VPG("Acrobot-v1")
+    train = False
     if train:
         vpg.train()
     else:
         vpg.load_checkpoint()
-        vpg.evaluate()
+        vpg.evaluate(render=True)
