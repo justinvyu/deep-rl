@@ -72,6 +72,9 @@ class VPG:
             rewards_to_go[i] = rewards[i] + (rewards_to_go[i + 1] if i + 1 < n else 0)
         return rewards_to_go
 
+    def get_advantage(self, batch_rewards, batch_returns):
+        return torch.Tensor(batch_rewards)
+
     def train_step(self, batch_size, lr=1e-2, render=False):
         """
         Performs one epoch of training, which consists of two parts:
@@ -124,7 +127,8 @@ class VPG:
         # 2. Policy Gradient Update Step
         _, log_probs = self.policy(torch.Tensor(batch_observations),
                                    torch.Tensor(batch_actions))
-        advantages = torch.Tensor(batch_rewards) # Most basic implementation.
+        # advantages = torch.Tensor(batch_rewards)
+        advantages = self.get_advantage(batch_rewards, batch_returns)
 
         # Define loss function.
         surrogate_loss = -(log_probs * advantages).mean()
@@ -162,11 +166,21 @@ class VPG:
         print('avg return: %.3f \t avg ep_len: %.3f' %
               (np.mean(batch_returns), np.mean(batch_lens)))
 
+class VPGWithAverageBaseline(VPG):
+    def __init__(self, env):
+        super(VPGWithAverageBaseline, self).__init__(env)
+
+    def get_advantage(self, batch_rewards, batch_returns):
+        avg = np.mean(batch_returns)
+        adv = np.array(batch_rewards) - avg
+        print(avg, adv)
+        return torch.Tensor(adv)
+
 if __name__ == "__main__":
-    vpg = VPG("Acrobot-v1")
-    train = False
+    vpg = VPGWithAverageBaseline("CartPole-v0")
+    train = True
     if train:
-        vpg.train()
+        vpg.train(render=False)
     else:
         vpg.load_checkpoint()
         vpg.evaluate(render=True)
