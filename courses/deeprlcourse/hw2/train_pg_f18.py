@@ -11,6 +11,7 @@ import os
 import time
 import inspect
 from multiprocessing import Process
+from tensorflow import keras
 
 #============================================================================================#
 # Utilities
@@ -38,7 +39,11 @@ def build_mlp(input_placeholder, output_size, scope, n_layers, size, activation=
         Hint: use tf.layers.dense    
     """
     # YOUR CODE HERE
-    raise NotImplementedError
+    with tf.variable_scope(scope):
+        hidden = tf.layers.dense(input_placeholder, size, activation=activation)
+        for _ in range(n_layers):
+            hidden = tf.layers.dense(hidden, size, activation=activation)
+        output_placeholder = tf.layers.dense(hidden, output_size, activation=output_activation)
     return output_placeholder
 
 def pathlength(path):
@@ -95,14 +100,14 @@ class Agent(object):
                 sy_ac_na: placeholder for actions
                 sy_adv_n: placeholder for advantages
         """
-        raise NotImplementedError
         sy_ob_no = tf.placeholder(shape=[None, self.ob_dim], name="ob", dtype=tf.float32)
         if self.discrete:
             sy_ac_na = tf.placeholder(shape=[None], name="ac", dtype=tf.int32) 
         else:
             sy_ac_na = tf.placeholder(shape=[None, self.ac_dim], name="ac", dtype=tf.float32) 
         # YOUR CODE HERE
-        sy_adv_n = None
+        # The advantage is the reward to go (minus some baseline), which is size 1.
+        sy_adv_n = tf.placeholder(shape=[None, 1], name="adv", dtype=tf.float32)
         return sy_ob_no, sy_ac_na, sy_adv_n
 
 
@@ -134,15 +139,16 @@ class Agent(object):
                 Pass in self.n_layers for the 'n_layers' argument, and
                 pass in self.size for the 'size' argument.
         """
-        raise NotImplementedError
         if self.discrete:
-            # YOUR_CODE_HERE
-            sy_logits_na = None
+            # The MLP in the discrete case returns logits (log probs)
+            # of each of the actions, given observations.
+            sy_logits_na = build_mlp(sy_ob_no, self.ac_dim, "Policy", self.layers, self.size)
             return sy_logits_na
         else:
-            # YOUR_CODE_HERE
-            sy_mean = None
-            sy_logstd = None
+            # The MLP in the continuous case returns the mean of the action distribution.
+            sy_mean = build_mlp(sy_ob_no, self.ac_dim, "Policy", self.layers, self.size)
+            # Create a trainable variable, which will store the std of the action distribution.
+            sy_logstd = tf.Variable(tf.zeros(self.ac_dim))
             return (sy_mean, sy_logstd)
 
     #========================================================================================#
@@ -172,11 +178,11 @@ class Agent(object):
         
                  This reduces the problem to just sampling z. (Hint: use tf.random_normal!)
         """
-        raise NotImplementedError
         if self.discrete:
             sy_logits_na = policy_parameters
-            # YOUR_CODE_HERE
-            sy_sampled_ac = None
+            # Create a categorical distribution to sample from, given the logits.
+            dist = tf.distributions.Categorical(logits=sy_logits_na)
+            sy_sampled_ac = dist.sample()
         else:
             sy_mean, sy_logstd = policy_parameters
             # YOUR_CODE_HERE
