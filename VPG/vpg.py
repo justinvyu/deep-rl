@@ -5,7 +5,7 @@ import gym
 from gym.spaces import Discrete, Box
 import pickle
 import os
-from policy import DiscretePolicy, ContinuousPolicy
+from VPG.policy import DiscretePolicy, ContinuousPolicy
 
 class VPG:
     def __init__(self, env):
@@ -118,7 +118,8 @@ class VPG:
                 batch_lens.append(num_steps)
 
                 # Each step in this trajectory is associated with the end reward.
-                batch_rewards += list(self.reward_to_go(ep_rewards))
+                batch_rewards += [total_reward] * num_steps
+                # batch_rewards += list(self.reward_to_go(ep_rewards))
 
                 observation, ep_rewards, done = env.reset(), [], False
                 if len(batch_observations) > batch_size:
@@ -177,7 +178,7 @@ class VPGWithAverageBaseline(VPG):
         return torch.Tensor(adv)
 
 if __name__ == "__main__":
-    vpg = VPGWithAverageBaseline("CartPole-v0")
+    vpg = VPG("CartPole-v0")
     train = True
     if train:
         vpg.train(render=False)
