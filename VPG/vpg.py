@@ -11,6 +11,8 @@ class VPG:
     def __init__(self, env):
         self.env_name = env
         self.env = gym.make(env)
+        self.env._max_episode_steps = 500
+
         self.observation_dim = self.env.observation_space.shape[0]
 
         action_space = self.env.action_space
@@ -75,22 +77,9 @@ class VPG:
     def get_advantage(self, batch_rewards, batch_returns):
         return torch.Tensor(batch_rewards)
 
-    def train_step(self, batch_size, lr=1e-2, render=False):
-        """
-        Performs one epoch of training, which consists of two parts:
-        1. Experience Collection
-            Experience collection is performed by sampling the current policy to get at least
-            `batch_size` samples of (s, a, r). These will be used by the update step.
-        2. Policy Gradient Update Step
-            The policy gradient update step first creates the surrogate loss function
-            L = -mean(log(pi(a|s)) * R(s, a)) over all state, action pairs. Then,
-        """
+    def sample_policy(self, batch_size, render=False):
         env = self.env
 
-        # Set up an optimizer on the policy's parameters.
-        optimizer = optim.Adam(self.policy.parameters(), lr=lr)
-
-        # 1. Experience Collection
         batch_observations = []
         batch_actions = []
         batch_rewards = []
@@ -113,23 +102,39 @@ class VPG:
 
             # Handle what happens when the episode is over.
             if done:
-                total_reward, num_steps = sum(ep_rewards), len(ep_rewards)
-                batch_returns.append(total_reward)
-                batch_lens.append(num_steps)
+                ep_return, ep_len= sum(ep_rewards), len(ep_rewards)
+                batch_returns.append(ep_return)
+                batch_lens.append(ep_len)
 
                 # Each step in this trajectory is associated with the end reward.
-                batch_rewards += [total_reward] * num_steps
-                # batch_rewards += list(self.reward_to_go(ep_rewards))
+                batch_rewards += list(self.reward_to_go(ep_rewards))
 
                 observation, ep_rewards, done = env.reset(), [], False
                 if len(batch_observations) > batch_size:
                     break
+        return batch_observations, batch_actions, batch_rewards, batch_returns, batch_lens
+
+    def train_step(self, batch_size, lr=1e-2, render=False):
+        """
+        Performs one epoch of training, which consists of two parts:
+        1. Experience Collection
+            Experience collection is performed by sampling the current policy to get at least
+            `batch_size` samples of (s, a, r). These will be used by the update step.
+        2. Policy Gradient Update Step
+            The policy gradient update step first creates the surrogate loss function
+            L = -mean(log(pi(a|s)) * R(s, a)) over all state, action pairs. Then,
+        """
+        # Set up an optimizer on the policy's parameters.
+        optimizer = optim.Adam(self.policy.parameters(), lr=lr)
+
+        # 1. Experience Collection
+        obs, acts, rewards, returns, lens = self.sample_policy(batch_size, render=render)
 
         # 2. Policy Gradient Update Step
-        _, log_probs = self.policy(torch.Tensor(batch_observations),
-                                   torch.Tensor(batch_actions))
+        _, log_probs = self.policy(torch.Tensor(obs),
+                                   torch.Tensor(acts))
         # advantages = torch.Tensor(batch_rewards)
-        advantages = self.get_advantage(batch_rewards, batch_returns)
+        advantages = self.get_advantage(rewards, returns)
 
         # Define loss function.
         surrogate_loss = -(log_probs * advantages).mean()
@@ -138,7 +143,7 @@ class VPG:
         surrogate_loss.backward()
         optimizer.step()
 
-        return surrogate_loss, batch_returns, batch_lens
+        return surrogate_loss, returns, lens
 
     def evaluate(self, num_rollouts=25, render=False):
         env = self.env
@@ -179,7 +184,7 @@ class VPGWithAverageBaseline(VPG):
 
 if __name__ == "__main__":
     vpg = VPG("CartPole-v0")
-    train = True
+    train = False
     if train:
         vpg.train(render=False)
     else:
