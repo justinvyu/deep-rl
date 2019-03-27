@@ -2,7 +2,7 @@
 Implementing deep reinforcement learning algorithms 🤖
 
 ## Algorithms:
-- [x] Behavior Cloning, DAgger ([courses/deeprlcourse/hw1](https://github.com/justinvyu/deep-rl/tree/master/courses/deeprlcourse/hw1)))
+- [x] Behavior Cloning, DAgger ([courses/deeprlcourse/hw1](https://github.com/justinvyu/deep-rl/tree/master/courses/deeprlcourse/hw1))
 - [x] Vanilla Policy Gradient ([VPG](https://github.com/justinvyu/deep-rl/tree/master/VPG))
 - [ ] (Vanilla) Actor Critic (ActorCritic)
 - [ ] Deep Q Network (DQN)

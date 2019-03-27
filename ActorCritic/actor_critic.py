@@ -58,7 +58,7 @@ class ActorCritic(VPG):
         # Filter out last state values. They should be 0, since there is no
         # future reward in those terminating states.
         last_states = np.array(lens) - 1
-        future_vals[filter] = 0
+        future_vals[last_states] = 0
 
         advantages = rewards + future_vals - self.critic(obs)
 
