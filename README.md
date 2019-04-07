@@ -4,8 +4,8 @@ Implementing deep reinforcement learning algorithms 🤖
 ## Algorithms:
 - [x] Behavior Cloning, DAgger ([courses/deeprlcourse/hw1](https://github.com/justinvyu/deep-rl/tree/master/courses/deeprlcourse/hw1))
 - [x] Vanilla Policy Gradient ([VPG](https://github.com/justinvyu/deep-rl/tree/master/VPG))
-- [ ] (Vanilla) Actor Critic (ActorCritic)
-- [ ] Deep Q Network (DQN)
+- [ ] (Vanilla) Actor Critic ([ActorCritic](https://github.com/justinvyu/deep-rl/tree/master/ActorCritic))
+- [ ] Deep Q Network ([DQN](https://github.com/justinvyu/deep-rl/tree/master/DQN))
 - [ ] Advantage Actor Critic (A2C)
 - [ ] Deep Deterministic Policy Gradient (DDPG)
 - [ ] Soft Actor Critic (SAC)

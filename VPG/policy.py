@@ -13,9 +13,8 @@ class DiscretePolicy(nn.Module):
         self.model_representation = [observation_dim] + hidden_layers + [action_dim]
 
     def forward(self, x, actions=None):
-        observation = x
         # Get the log probabilities of actions, given the observation.
-        logits = self.logits(observation)
+        logits = self.logits(x)
         # Now, create a categorical distribution (which is the policy for a discrete-action setting).
         policy = Categorical(logits=logits)
         # Sample from the policy, unless we are provided an action. In that case,
@@ -37,7 +36,6 @@ class ContinuousPolicy(nn.Module):
         self.sigma = nn.Parameter(torch.ones(action_dim))
 
     def forward(self, x, actions=None):
-        observation = x
         # Get the means of the actions.
         means = self.mu(x)
         policy = Normal(means, self.sigma)
