@@ -2,28 +2,31 @@ import torch
 import torch.optim as optim
 import numpy as np
 import gym
-from gym.spaces import Discrete, Box
 import pickle
 import os
 from VPG.policy import DiscretePolicy, ContinuousPolicy
+from utils import gym_utils
 
 class VPG:
-    def __init__(self, env):
-        self.env_name = env
-        self.env = gym.make(env)
-        self.env._max_episode_steps = 500
+    def __init__(self, env_name):
+        self.env_name = env_name
+        self.env = gym.make(env_name)
+        self.env._max_episode_steps = 500 # Make episodes longer for more learning.
 
-        self.observation_dim = self.env.observation_space.shape[0]
+        self.discrete = gym_utils.is_discrete(self.env)
+        self.observation_dim = gym_utils.get_observation_dim(self.env)
+        self.action_dim = gym_utils.get_action_dim(self.env)
 
-        action_space = self.env.action_space
-        self.discrete = isinstance(action_space, Discrete)
-
-        if self.discrete:
-            self.action_dim = self.env.action_space.n
-        else:
-            self.action_dim = self.env.action_space.shape[0]
+        # action_space = self.env.action_space
+        # self.discrete = isinstance(action_space, Discrete)
+        #
+        # if self.discrete:
+        #     self.action_dim = self.env.action_space.n
+        # else:
+        #     self.action_dim = self.env.action_space.shape[0]
 
         self.policy = self.build_model()
+
         # for name, param in self.policy.named_parameters():
         #     if param.requires_grad:
         #         print(name, param.data)
