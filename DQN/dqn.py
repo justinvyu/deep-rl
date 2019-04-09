@@ -45,28 +45,44 @@ class ReplayBuffer:
 class DQN:
     def __init__(self,
                  env_name,
-                 epochs_per=1, N=1,
+                 q_func,
+                 target_q_func,
                  replay_buffer_capacity=1000000,
                  batch_size=32,
                  gamma=0.99,
+                 learning_starts=50000,
+                 learning_freq=4,
+                 target_update_freq=10000,
                  double_q=True):
         # Set up environment.
         self.env_name = env_name
         self.env = gym.make(env_name)
 
         # Parameters of DQN
-        self.K = K
-        self.N = N
+        self.replay_buffer_capacity = replay_buffer_capacity
+        self.batch_size = batch_size
+        self.gamma = gamma
+        self.learning_starts = learning_starts
+        self.learning_freq = learning_freq
+        self.target_update_freq = target_update_freq
+        self.double_q = double_q
+
+        self.last_obs = self.env.reset()
+        self.t = 0
+        self.num_param_updates = 0
 
         # Create Q-network/target network.
         self.observation_dim, self.action_dim = gym_utils.get_observation_dim(self.env), \
                                                 gym_utils.get_action_dim(self.env)
         # Build model to perform regression for the Q-value (single real number output)
-        self.Q = MLP(self.observation_dim, [64, 32, 32], 1)
+        self.q_func = q_func
         # Parameters will be copied from `self.Q` into the target network.
-        self.target = MLP(self.observation_dim, [64, 32, 32], 1)
+        self.target_q_func = target_q_func
 
-    def train(self, epochs=50):
+        # Create replay buffer.
+        self.memory = ReplayBuffer(replay_buffer_capacity)
+
+    def train(self, num_timesteps=1e8):
         """
         Training steps:
         1. Collect experience, add to replay buffer.
@@ -75,4 +91,31 @@ class DQN:
         4. K epochs of regression, updating parameters phi of `self.Q`
         5. Update target network Q'.
         """
-        pass
+        while self.t < num_timesteps:
+            self.env_step()
+            self.update_model()
+
+    def env_step(self):
+        # ...
+
+        self.t += 1
+
+    def update_model(self):
+        if self.t % self.learning_freq == 0 and self.memory.size >= self.learning_starts:
+            # ...
+            self.num_param_updates += 1
+
+if __name__ == "__main__":
+    env_name = "CartPole-v0"
+    env = gym.make(env_name)
+    obs_dim = gym_utils.get_observation_dim(env)
+    act_dim = gym_utils.get_action_dim(env)
+    q_func = MLP(obs_dim, [32, 32], act_dim)
+    target = MLP(obs_dim, [32, 32], act_dim)
+
+    dqn = DQN(
+        env_name=env_name,
+        q_func=q_func,
+        target_q_func=target,
+    )
+

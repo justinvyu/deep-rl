@@ -9,6 +9,7 @@ Need to implement:
     - `N`: the number of data collections per target network parameter 
            update (the frequency of saving phi' <- phi)
     - `K=1, N=1` is the implementation for the classic DQN algorithm. Try playing around with this.
+    - Use Huber loss to compute the Bellman error.
  - [ ] Double Q-learning
       - Using the current network phi to evaluate the action and the saved network phi' to compute the 
         predicted value at that state/action.
